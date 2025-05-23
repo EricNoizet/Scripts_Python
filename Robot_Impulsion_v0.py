@@ -2,11 +2,7 @@ import time
 import numpy as np
 from binance.client import Client
 
-## test
-## test2
-## test3
-## test4
-## test5
+# test de mise à jour
 # Remplacez par vos clés API Binance
 api_key = 'VOTRE_API_KEY'
 api_secret = 'VOTRE_SECRET_API'
