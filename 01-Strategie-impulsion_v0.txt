@@ -1,0 +1,138 @@
+Strategie en 1 seconde sur ETH USDC
+
+On part sur du LONG. On ne prend que des positions longues, car on n'a pas d'ETH à vendre
+
+Marché haussier si MMS5 > MMS20. On prend position si la MMS2 se retourne à la hausse et que le prix et supérieur à MMS5
+
+
+Ouverture de position à l'achat : C1 et C2 et C3
+
+C1 : MMS 5 > MMS20
+C2 : MMS 2 passe de decroissante à croissante
+C3 : pris > MMS 5
+
+Cloture de position longue : C4 ou C5
+
+C4 : MMS 5 passe sous MMS 20
+C5 : MMS 5 décroissante
+
+
+###############################################
+Robot_Impulsion_v0
+###############################################
+
+Génèse du script à partir du script "   Robot_MMS_v1   " qui fonctionne bien :
+
+
+Voici un script qui fonctionne, mais je veux changer la strategie. ne garde dans le futur script que ce qui est nécessaire pour la nouvelle stratégie.
+Tu ne changes que la strategie; je veux voir dans la console la meme chose que dans l'ancien script.
+Tu dois implanter la strategie de trading ci-dessous, dans laquelle on ne peut qu'être LONG :
+
+# Stratégie :
+
+Ouverture de position à l'achat : C1 et C2 et C3
+
+C1 : MMS 5 > MMS20
+C2 : MMS 2 passe de decroissante à croissante
+C3 : pris > MMS 5
+
+Cloture de position longue : C4 ou C5
+
+C4 : MMS 5 passe sous MMS 20
+C5 : MMS 5 décroissante
+
+# Script que tu dois modifier :
+
+## Ce programme étend la stratégie de trading algorithmique décrite dans le premier script v0 en introduisant une vérification de tendance haussière.
+## Contrairement au premier script, celui-ci utilise une moyenne mobile simple à plus long terme (SMA) pour déterminer si le marché est dans une tendance haussière avant d'autoriser un achat.
+## Cette nouvelle condition vise à réduire les achats dans des marchés baissiers ou volatils, augmentant ainsi la robustesse de la stratégie.
+## Le reste du code conserve les fonctionnalités de base du premier script, telles que les décisions d'achat/vente basées sur la moyenne mobile à court terme.
+
+
+import time
+import numpy as np
+from binance.client import Client
+
+# Remplacez par vos clés API Binance
+api_key = 'VOTRE_API_KEY'
+api_secret = 'VOTRE_SECRET_API'
+client = Client(api_key, api_secret)
+
+# Paramètres de la stratégie
+symbol = "ETHUSDT"  # Paire de crypto-monnaie
+ma_period = 20  # Période de la moyenne mobile
+long_term_sma_period = 50  # Période de la SMA pour détecter la tendance haussière
+interval = Client.KLINE_INTERVAL_1SECOND  # Intervalle de 1 seconde
+token_quantity = 2  # Nombre de tokens à acheter à chaque transaction
+
+# Variables de suivi
+position = None  # None : aucune position, 'buy' : position longue, 'sell' : position courte
+historical_data = []  # Liste pour stocker les prix historiques
+initial_price = None  # Prix initial d'achat
+cumulative_pnl = 0  # Gains/Pertes cumulés
+transaction_count = 0  # Compteur de transactions
+
+# Fonction pour récupérer les dernières données
+def get_new_data():
+    klines = client.get_klines(symbol=symbol, interval=interval, limit=1)
+    return float(klines[0][4])  # Récupère le prix de clôture
+
+# Fonction pour calculer la moyenne mobile
+def calculate_moving_average(data, period):
+    if len(data) < period:
+        return None  # Pas assez de données pour calculer la moyenne mobile
+    return np.mean(data[-period:])  # Moyenne des X dernières valeurs
+
+# Fonction pour vérifier si la tendance est haussière (basée sur la SMA)
+def is_uptrend(data, period):
+    if len(data) < period:
+        return False  # Pas assez de données pour vérifier la tendance
+    sma_value = np.mean(data[-period:])  # Calcul de la SMA
+    return data[-1] > sma_value  # Le prix actuel doit être au-dessus de la SMA
+
+# Fonction pour prendre une décision d'achat/vente
+def trade_decision(current_price, ma_value):
+    global position, initial_price, cumulative_pnl, transaction_count
+
+    if ma_value is None:
+        return  # Pas assez de données pour la moyenne mobile
+
+    # Vérifier la tendance haussière avant d'acheter
+    if is_uptrend(historical_data, long_term_sma_period) and current_price > ma_value and position != 'buy':
+        print(f"Achat de {token_quantity} tokens à {current_price}")
+        position = 'buy'
+        initial_price = current_price  # Enregistrer le prix d'achat
+
+    # Si la moyenne mobile est décroissante et qu'il y a une position, vendre
+    elif current_price < ma_value and position == 'buy':
+        pnl = (current_price - initial_price) * token_quantity  # Calcul du gain/perte sur la quantité
+        cumulative_pnl += pnl  # Ajouter au total
+        transaction_count += 1  # Incrémenter le compteur de transactions
+        print(f"Vente de {token_quantity} tokens à {current_price} | PnL de la transaction : {pnl:.2f}")
+        print(f"Gains/Pertes cumulés après {transaction_count} transactions : {cumulative_pnl:.2f}")
+        position = 'sell'
+
+# Boucle de simulation en temps réel
+def real_time_simulation():
+    global historical_data
+
+    print("Démarrage de la simulation en temps réel...")
+    while True:
+        # Récupérer la dernière donnée en temps réel
+        current_price = get_new_data()
+        historical_data.append(current_price)
+
+        # Calcul de la moyenne mobile
+        ma_value = calculate_moving_average(historical_data, ma_period)
+
+        # Affichage de la moyenne mobile et du prix actuel
+        print(f"Prix actuel : {current_price} | Moyenne mobile : {ma_value}")
+
+        # Prendre une décision d'achat/vente
+        trade_decision(current_price, ma_value)
+
+        # Attendre 1 seconde avant de récupérer les prochaines données
+        time.sleep(1)
+
+# Exécuter la simulation
+real_time_simulation()
