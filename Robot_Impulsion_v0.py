@@ -4,6 +4,8 @@ from binance.client import Client
 
 # test de mise à jour à partir du Raspberry
 # Ajout d'un commentaire
+# test second
+# test
 # Remplacez par vos clés API Binance
 api_key = 'VOTRE_API_KEY'
 api_secret = 'VOTRE_SECRET_API'
