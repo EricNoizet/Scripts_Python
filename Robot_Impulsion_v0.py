@@ -2,7 +2,7 @@ import time
 import numpy as np
 from binance.client import Client
 
-# test de mise à jour
+# test de mise à jour à partir du Raspberry
 # Remplacez par vos clés API Binance
 api_key = 'VOTRE_API_KEY'
 api_secret = 'VOTRE_SECRET_API'
